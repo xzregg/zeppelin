@@ -392,7 +392,7 @@ public class NotebookRestApi extends AbstractRestApi {
     Note note = notebookService.createNote(
             request.getName(),
             defaultInterpreterGroup,
-            false,
+            request.getAddingEmptyParagraph(),
             getServiceContext(),
             new RestServiceCallback<>());
     AuthenticationInfo subject = new AuthenticationInfo(authenticationService.getPrincipal());
@@ -402,7 +402,7 @@ public class NotebookRestApi extends AbstractRestApi {
         initParagraph(p, paragraphRequest, user);
       }
     }
-    return new JsonResponse(Status.OK, "", note.getId()).build();
+    return new JsonResponse<>(Status.OK, "", note.getId()).build();
   }
 
   /**
@@ -491,7 +491,7 @@ public class NotebookRestApi extends AbstractRestApi {
                 notebookServer.broadcastNoteList(context.getAutheInfo(), context.getUserAndRoles());
               }
             });
-    return new JsonResponse(Status.OK, "").build();
+    return new JsonResponse<>(Status.OK, "").build();
   }
 
   /**
@@ -639,7 +639,7 @@ public class NotebookRestApi extends AbstractRestApi {
                 notebookServer.broadcastNote(result.getNote());
               }
             });
-    return new JsonResponse(Status.OK, "").build();
+    return new JsonResponse<>(Status.OK, "").build();
   }
 
   /**
@@ -664,7 +664,7 @@ public class NotebookRestApi extends AbstractRestApi {
               }
             });
 
-    return new JsonResponse(Status.OK, "").build();
+    return new JsonResponse<>(Status.OK, "").build();
   }
 
   @POST
@@ -675,7 +675,7 @@ public class NotebookRestApi extends AbstractRestApi {
     Paragraph p = notebookService.getNextSessionParagraph(noteId, maxParagraph,
             getServiceContext(),
             new RestServiceCallback<>());
-    return new JsonResponse(Status.OK, p.getId()).build();
+    return new JsonResponse<>(Status.OK, p.getId()).build();
   }
 
   /**
@@ -692,7 +692,7 @@ public class NotebookRestApi extends AbstractRestApi {
     LOGGER.info("Clear all paragraph output of note {}", noteId);
     notebookService.clearAllParagraphOutput(noteId, getServiceContext(),
             new RestServiceCallback<>());
-    return new JsonResponse(Status.OK, "").build();
+    return new JsonResponse<>(Status.OK, "").build();
   }
 
   /**
@@ -731,7 +731,7 @@ public class NotebookRestApi extends AbstractRestApi {
     LOGGER.info("Run note jobs, noteId: {}, blocking: {}, isolated: {}, params: {}", noteId, blocking, isolated, params);
     Note note = notebook.getNote(noteId);
     AuthenticationInfo subject = new AuthenticationInfo(authenticationService.getPrincipal());
-    subject.setRoles(new LinkedList<>(authenticationService.getAssociatedRoles()));
+    subject.setRoles(authenticationService.getAssociatedRoles());
     checkIfNoteIsNotNull(note, noteId);
     checkIfUserCanRun(noteId, "Insufficient privileges you cannot run job for this note");
 

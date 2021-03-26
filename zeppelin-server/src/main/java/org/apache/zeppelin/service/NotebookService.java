@@ -21,6 +21,7 @@ package org.apache.zeppelin.service;
 
 import static org.apache.zeppelin.conf.ZeppelinConfiguration.ConfVars.ZEPPELIN_NOTEBOOK_HOMESCREEN;
 import static org.apache.zeppelin.interpreter.InterpreterResult.Code.ERROR;
+import static org.apache.zeppelin.scheduler.Job.Status.ABORT;
 
 import com.google.common.base.Strings;
 import java.io.IOException;
@@ -116,7 +117,14 @@ public class NotebookService {
   public Note getNote(String noteId,
                       ServiceContext context,
                       ServiceCallback<Note> callback) throws IOException {
-    Note note = notebook.getNote(noteId);
+    return getNote(noteId, false, context, callback);
+  }
+
+  public Note getNote(String noteId,
+                      boolean reload,
+                      ServiceContext context,
+                      ServiceCallback<Note> callback) throws IOException {
+    Note note = notebook.getNote(noteId, reload);
     if (note == null) {
       callback.onFailure(new NoteNotFoundException(noteId), context);
       return null;
@@ -321,7 +329,7 @@ public class NotebookService {
                               ServiceContext context,
                               ServiceCallback<Paragraph> callback) throws IOException {
 
-    LOGGER.info("Start to run paragraph: " + paragraphId + " of note: " + noteId);
+    LOGGER.info("Start to run paragraph: {} of note: {}", paragraphId, noteId);
     if (!checkPermission(noteId, Permission.RUNNER, Message.OP.RUN_PARAGRAPH, context, callback)) {
       return false;
     }
@@ -412,7 +420,7 @@ public class NotebookService {
         for (Map<String, Object> raw : paragraphs) {
           String paragraphId = (String) raw.get("id");
           if (paragraphId == null) {
-            LOGGER.warn("No id found in paragraph json: " + raw);
+            LOGGER.warn("No id found in paragraph json: {}", raw);
             continue;
           }
           try {
@@ -432,6 +440,9 @@ public class NotebookService {
             if (result != null && result.code() == ERROR) {
               return false;
             }
+            if (p.getStatus() == ABORT || p.isAborted()) {
+              return false;
+            }
           } catch (Exception e) {
             throw new IOException("Fail to run paragraph json: " + raw, e);
           }
@@ -445,7 +456,7 @@ public class NotebookService {
         note.runAll(context.getAutheInfo(), true, false, new HashMap<>());
         return true;
       } catch (Exception e) {
-        LOGGER.warn("Fail to run note: " + note.getName(), e);
+        LOGGER.warn("Fail to run note: {}", note.getName(), e);
         return false;
       }
     }
@@ -588,7 +599,7 @@ public class NotebookService {
 
 
   public void restoreAll(ServiceContext context,
-                         ServiceCallback callback) throws IOException {
+                         ServiceCallback<?> callback) throws IOException {
 
     try {
       notebook.restoreAll(context.getAutheInfo());
@@ -969,7 +980,6 @@ public class NotebookService {
       callback.onSuccess(settings, context);
     } catch (Exception e) {
       callback.onFailure(new IOException("Fail to getEditorSetting", e), context);
-      return;
     }
   }
 
@@ -1021,7 +1031,7 @@ public class NotebookService {
 
     //TODO(zjffdu) folder permission check
     //TODO(zjffdu) folderPath is relative path, need to fix it in frontend
-    LOGGER.info("Move folder " + folderPath + " to trash");
+    LOGGER.info("Move folder {} to trash", folderPath);
 
     String destFolderPath = "/" + NoteManager.TRASH_FOLDER + "/" + folderPath;
     if (notebook.containsNote(destFolderPath)) {

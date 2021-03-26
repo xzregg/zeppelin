@@ -28,6 +28,7 @@ import org.apache.flink.client.program.{ClusterClient, MiniClusterClient}
 import org.apache.flink.configuration._
 import org.apache.flink.runtime.minicluster.{MiniCluster, MiniClusterConfiguration}
 import org.apache.flink.yarn.executors.YarnSessionClusterExecutor
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -36,7 +37,7 @@ import scala.collection.mutable.ArrayBuffer
  * it work with multiple versions of flink.
  */
 object FlinkShell {
-
+  private lazy val LOGGER: Logger = LoggerFactory.getLogger(getClass)
   object ExecutionMode extends Enumeration {
     val UNDEFINED, LOCAL, REMOTE, YARN = Value
   }
@@ -110,7 +111,12 @@ object FlinkShell {
 
   private def deployNewYarnCluster(config: Config, flinkConfig: Configuration, flinkShims: FlinkShims) = {
     var effectiveConfig = new Configuration(flinkConfig)
-    val args = parseArgList(config, "yarn-cluster")
+
+    var tmMemory = effectiveConfig.getString("taskmanager.memory.process.size","1024mb")
+    var new_config = config.copy(yarnConfig =
+      Some(ensureYarnConfig(config)
+        .copy(taskManagerMemory = Some(tmMemory))))
+    val args = parseArgList(new_config, "yarn-cluster")
 
     val configurationDirectory = getConfigDir(config)
 
@@ -126,6 +132,9 @@ object FlinkShell {
     effectiveConfig = flinkShims
       .updateEffectiveConfig(frontend, commandLine, effectiveConfig)
       .asInstanceOf[Configuration]
+
+    LOGGER.info("deployNewYarnCluster updateEffectiveConfig =============")
+    println(effectiveConfig.toMap)
 
     val serviceLoader = new DefaultClusterClientServiceLoader
     val clientFactory = serviceLoader.getClusterClientFactory(effectiveConfig)
@@ -167,6 +176,8 @@ object FlinkShell {
     effectiveConfig = flinkShims
       .updateEffectiveConfig(frontend, commandLine, effectiveConfig)
       .asInstanceOf[Configuration]
+    LOGGER.info("fetchDeployedYarnClusterInfo =============")
+    println(effectiveConfig.toMap.toString)
 
     (effectiveConfig, None)
   }

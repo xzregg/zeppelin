@@ -1,0 +1,1 @@
+mvn  package -pl interpreter -am -DskipTests

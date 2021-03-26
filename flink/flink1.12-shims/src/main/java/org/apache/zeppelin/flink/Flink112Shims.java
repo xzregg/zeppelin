@@ -27,11 +27,15 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.scala.DataSet;
 import org.apache.flink.client.cli.CliFrontend;
 import org.apache.flink.client.cli.CustomCommandLine;
+import org.apache.flink.client.cli.SavepointOptions;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ReadableConfig;
+import org.apache.flink.connector.file.src.util.CheckpointedPosition;
 import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.python.PythonOptions;
+import org.apache.flink.runtime.jobgraph.SavepointConfigOptions;
+import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironmentFactory;
 import org.apache.flink.table.api.EnvironmentSettings;
@@ -427,6 +431,7 @@ public class Flink112Shims extends FlinkShims {
   public Object updateEffectiveConfig(Object cliFrontend, Object commandLine, Object effectiveConfig) {
     CustomCommandLine customCommandLine = ((CliFrontend)cliFrontend).validateAndGetActiveCommandLine((CommandLine) commandLine);
     try {
+
        ((Configuration) effectiveConfig).addAll(customCommandLine.toConfiguration((CommandLine) commandLine));
        return effectiveConfig;
     } catch (FlinkException e) {
@@ -438,6 +443,8 @@ public class Flink112Shims extends FlinkShims {
   public Map extractTableConfigOptions() {
     Map<String, ConfigOption> configOptions = new HashMap<>();
     configOptions.putAll(extractConfigOptions(ExecutionConfigOptions.class));
+    configOptions.putAll(extractConfigOptions(SavepointConfigOptions.class));
+
     configOptions.putAll(extractConfigOptions(OptimizerConfigOptions.class));
     configOptions.putAll(extractConfigOptions(PythonOptions.class));
     configOptions.putAll(extractConfigOptions(TableConfigOptions.class));
